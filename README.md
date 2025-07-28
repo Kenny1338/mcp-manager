@@ -1,279 +1,267 @@
 # MCP Manager - Docker-like Interface for MCP Servers
 
-A comprehensive management system for Model Context Protocol (MCP) servers with a Docker-like user interface and AI-assisted development features.
+A clean, class-based management system for Model Context Protocol (MCP) servers with a Docker-like command-line interface.
+
+## Features
+
+### ✅ Core Features
+
+- **Docker-like CLI**: Familiar commands like `ps`, `start`, `stop`, `logs`, `inspect`
+- **Server Registry**: Automatic storage and management of server configurations  
+- **Process Management**: Full lifecycle management of server processes with PID tracking
+- **Real-time Logging**: Automatic log collection and live log following for each server
+- **Status Tracking**: Real-time status updates (running, stopped, error, starting)
+- **Health Checks**: Optional health check command configuration
+- **Multiple Output Formats**: JSON, YAML, and table output formats
+- **Force Operations**: Graceful and force termination options
+- **Auto-start**: Option to automatically start servers after creation
+
+### 🏗️ Architecture
+
+- **Clean Class-based Design**: Modular architecture with single responsibility principle
+- **Separation of Concerns**: Dedicated managers for servers, processes, and logs
+- **Extensible Structure**: Easy to add new features and commands
+- **Error Handling**: Comprehensive exception handling with custom error types
+- **Configuration Management**: JSON-based persistence with backup support
 
 ## Installation
 
-### Automatic Installation (recommended)
+### Quick Installation
 
-```bash
-# Run the installation script
-./install.sh
-```
-
-The script does the following:
-- Installs Python dependencies
-- Makes the tool executable
-- Creates a symbolic link in `/usr/local/bin/` or `~/.local/bin/`
-- Checks PATH configuration
-
-### Setup for AI Features
-
-After installation, run the interactive setup wizard to configure your LLM:
-
-```bash
-# Interactive setup wizard (recommended)
-mcp setup
-
-# Or configure manually
-mcp config set llm.api_key YOUR_API_KEY
-mcp config show
-```
-
-The setup wizard will guide you through:
-1. **Provider Selection**: Anthropic Claude, OpenAI GPT, or Local LLM
-2. **API Key Configuration**: Secure entry and storage
-3. **Model Selection**: Choose the best model for your needs
-4. **Verification**: Test your configuration
-
-### Manual Installation
-
-1. Install dependencies:
+1. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Make the tool executable:
+2. **Make executable:**
 ```bash
 chmod +x mcp.py
 ```
 
-3. Create symbolic link for global usage:
+3. **Optional: Create system-wide link:**
 ```bash
-# Option 1: System-wide (requires sudo)
+# System-wide (requires sudo)
 sudo ln -s $(pwd)/mcp.py /usr/local/bin/mcp
 
-# Option 2: Only for current user
+# Or user-only
 mkdir -p ~/.local/bin
 ln -s $(pwd)/mcp.py ~/.local/bin/mcp
 export PATH="$HOME/.local/bin:$PATH"  # Add to ~/.bashrc
+```
+
+### Automated Installation
+
+```bash
+./install.sh
 ```
 
 ## Usage
 
 ### Basic Commands
 
-After installation you can run `mcp` from anywhere:
-
 ```bash
-# Show all running MCP servers
+# Show running servers
 mcp ps
 
 # Show all servers (including stopped)
 mcp ps -a
 
 # Create new MCP server
-mcp create my-server "python /path/to/server.py"
+mcp create my-server "python3 /path/to/server.py"
 
-# Start server
+# Create server with configuration and health check
+mcp create my-server "python3 server.py" --config config.json --health-check "curl localhost:8080/health"
+
+# Create and auto-start server
+mcp create my-server "python3 server.py" --auto-start
+
+# Start server(s)
 mcp start my-server
+mcp start server1 server2 server3  # Multiple servers
 
-# Stop server
+# Stop server(s)
 mcp stop my-server
+mcp stop server1 server2 --timeout 30  # Custom timeout
 
-# Restart server
+# Force kill server(s)
+mcp stop my-server --force
+
+# Restart server(s)
 mcp restart my-server
 
 # Show server logs
 mcp logs my-server
-
-# Follow live logs
-mcp logs my-server -f
+mcp logs my-server --tail 100    # Show last 100 lines
+mcp logs my-server -f            # Follow live logs
+mcp logs my-server --search "ERROR"  # Search logs
+mcp logs my-server --clear       # Clear log file
 
 # Show detailed server information
 mcp inspect my-server
+mcp inspect my-server --format json    # JSON output
+mcp inspect my-server --format yaml    # YAML output
 
-# Remove server
+# Remove server(s)
 mcp rm my-server
-
-# Force remove running server
-mcp rm my-server -f
+mcp rm server1 server2 -f       # Force remove running servers
+mcp rm my-server --keep-logs     # Remove but keep log files
 ```
 
-### AI-Assisted Development Commands
+### Output Formats
 
+#### Table Format (Default)
 ```bash
-# Generate new MCP server with AI assistance
-mcp generate weather-server
-
-# Generate and auto-start server
-mcp generate my-api-server --auto-start
-
-# Edit existing server with AI guidance
-mcp edit weather-server "add a tool for getting 7-day forecast"
-
-# Edit server with specific instructions
-mcp edit my-server "optimize the database queries and add error handling"
+mcp ps
+# NAME                 STATUS     PID      CREATED              COMMAND
+# weather-server       running    12345    2024-01-15 10:30:45  python3 weather.py
+# api-server          stopped    -        2024-01-15 09:15:20  node api.js
 ```
 
-### JSON Configuration Export
-
+#### JSON Format
 ```bash
-# Export server configuration for Cline/Claude Desktop
-mcp provide weather-server
-
-# Output: Ready-to-use JSON configuration with:
-# - Correct command and arguments
-# - Environment variables (API keys) for server type
-# - File path instructions for different tools
+mcp ps --format json
+mcp inspect my-server --format json
 ```
 
-### Configuration Management
-
+#### YAML Format
 ```bash
-# Show current configuration
-mcp config show
-
-# Set LLM API key (required for AI features)
-mcp config set llm.api_key YOUR_API_KEY
-
-# Set LLM provider (anthropic, openai, or local)
-mcp config set llm.provider anthropic
-
-# Set specific model
-mcp config set llm.model claude-3-sonnet-20240229
-
-# For local LLMs, set base URL
-mcp config set llm.base_url http://localhost:11434
-
-# Get specific configuration value
-mcp config get llm.provider
+mcp ps --format yaml
+mcp inspect my-server --format yaml
 ```
 
-### Advanced Configuration
+## Configuration
 
-```bash
-# Create server with configuration file
-mcp create my-server "python server.py" --config /path/to/config.json
-
-# Create server with health check
-mcp create my-server "python server.py" --health-check "curl http://localhost:8080/health"
+### Server Configuration Structure
+```json
+{
+  "my-server": {
+    "name": "my-server",
+    "command": "python3 server.py",
+    "config_file": "/path/to/config.json",
+    "health_check": "curl localhost:8080/health",
+    "pid": 12345,
+    "status": "running",
+    "created": "2024-01-15T10:30:45.123456",
+    "started": "2024-01-15T10:30:45.789012",
+    "ports": []
+  }
+}
 ```
 
-## Features
-
-### ✅ Implemented
-
-- **Docker-like CLI**: Familiar commands like `ps`, `start`, `stop`, `logs`, `inspect`
-- **Server Registry**: Automatic storage and management of server configurations
-- **Process Management**: Monitoring of server processes with PIDs
-- **Logging**: Automatic log collection for each server
-- **Status Tracking**: Real-time status updates (running, stopped, error, starting)
-- **Configuration Management**: Support for server-specific configuration files
-- **Health Checks**: Optional health check commands
-- **Force Operations**: Forced server removal even for running processes
-- **🤖 AI-Assisted Generation**: Create new MCP servers with interactive project selection
-- **🎯 Smart Project Templates**: Pre-configured templates for common server types
-- **✏️ AI-Guided Editing**: Modify existing servers with natural language instructions
-- **🔄 Auto-Integration**: Generated servers are automatically added and optionally started
-
-### 🔄 In Development
-
-- **Full AI Integration**: Real server generation based on user requirements
-- **Advanced Editing**: AI-powered code modifications and optimizations
-- **Template Expansion**: More project types and customization options
-- Service Discovery
-- Automatic Start/Stop
-- Container-like Isolation
-- Network Management
-- Volume Management
-
-## Architecture
-
-The system consists of:
-
-1. **MCPManager**: Main class for server management
-2. **MCPServer**: Data class for server representation
-3. **CLI Interface**: Argparse-based command line
-4. **Configuration Storage**: JSON-based persistence in `~/.mcp/`
-5. **Logging System**: Separate log files for each server
-
-## File Structure
-
+### File Structure
 ```
 ~/.mcp/
 ├── servers.json          # Server configurations
-├── config.json           # LLM and system configuration
 └── logs/
-    ├── server1.log        # Server-specific logs
-    └── server2.log
+    ├── my-server.log      # Server-specific logs
+    └── api-server.log
 ```
 
 ## Examples
 
-### Create and start MCP Server with Python
+### Basic Server Management
 
 ```bash
-# Create server
-mcp create weather-server "python3 /home/user/mcp-servers/weather/server.py"
+# Create a Python MCP server
+mcp create weather-server "python3 weather_server.py"
 
-# Start server
+# Start and monitor
 mcp start weather-server
+mcp ps
+mcp logs weather-server -f
+
+# Stop when done
+mcp stop weather-server
+```
+
+### Managing Multiple Servers
+
+```bash
+# Create multiple servers
+mcp create db-server "node database.js" --config db-config.json
+mcp create api-server "python3 api.py" --health-check "curl localhost:8080/health"
+mcp create file-server "go run fileserver.go"
+
+# Start all servers
+mcp start db-server api-server file-server
 
 # Check status
 mcp ps
 
-# View logs
-mcp logs weather-server -f
+# Stop specific servers
+mcp stop api-server file-server
+
+# Remove all servers
+mcp rm db-server api-server file-server -f
 ```
 
-### Manage multiple servers
+### Advanced Log Management
 
 ```bash
-# Create multiple servers
-mcp create database-server "node /path/to/db-server.js"
-mcp create api-server "python /path/to/api-server.py"
-mcp create file-server "go run /path/to/file-server.go"
+# View recent logs
+mcp logs my-server --tail 50
 
-# Start all
-mcp start database-server
-mcp start api-server
-mcp start file-server
+# Follow live logs
+mcp logs my-server -f
 
-# Status of all servers
-mcp ps
+# Search for errors
+mcp logs my-server --search "ERROR" --tail 1000
+
+# Clear log file
+mcp logs my-server --clear
 ```
 
-### AI-Assisted Development Examples
+## Architecture
 
-```bash
-# Generate a weather server
-mcp generate weather-api
-# Interactive prompt:
-# 1. Weather Server (OpenWeather API) ✅
-# Generated server with TypeScript, API integration, and tools
+The system uses a clean, modular architecture:
 
-# Generate and auto-start a file management server
-mcp generate file-manager --auto-start
-# Select: 2. File System Server
-# Server created, built, and started automatically
+- **[`mcp/models/server.py`](mcp/models/server.py)**: MCPServer data model with validation
+- **[`mcp/managers/server_manager.py`](mcp/managers/server_manager.py)**: Server lifecycle management (CRUD operations)
+- **[`mcp/managers/process_manager.py`](mcp/managers/process_manager.py)**: Process management (start/stop/restart)
+- **[`mcp/managers/log_manager.py`](mcp/managers/log_manager.py)**: Log file operations and monitoring
+- **[`mcp/core/config.py`](mcp/core/config.py)**: Configuration file management
+- **[`mcp/cli/`](mcp/cli/)**: Command-line interface and argument parsing
+- **[`mcp/utils/`](mcp/utils/)**: Utility functions for file and system operations
 
-# Edit existing server to add new functionality
-mcp edit weather-api "add a tool for getting weather alerts and warnings"
-# AI analyzes current server and adds new tools
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for detailed architecture documentation.
 
-# Complex modifications
-mcp edit database-server "optimize all queries, add connection pooling, and improve error handling"
-# AI modifies multiple files and rebuilds server
-```
+## Error Handling
+
+The system includes comprehensive error handling:
+
+- **ServerNotFoundError**: When trying to access non-existent servers
+- **ServerAlreadyExistsError**: When creating servers with duplicate names
+- **ServerStartError/ServerStopError**: Process management failures
+- **ConfigurationError**: Configuration file issues
+- **LogError**: Log file operation failures
+
+## Requirements
+
+- Python 3.7+
+- psutil
+- PyYAML (optional, for YAML output format)
 
 ## Development
 
-The system is expandable and follows a modular structure. New features can be easily added by:
+### Adding New Features
 
-1. Extending the `MCPServer` class
-2. Adding new methods to the `MCPManager` class
-3. Extending the CLI parser
+1. **New Commands**: Add to [`mcp/cli/parser.py`](mcp/cli/parser.py) and [`mcp/cli/commands.py`](mcp/cli/commands.py)
+2. **New Managers**: Create in [`mcp/managers/`](mcp/managers/) following the existing pattern
+3. **New Utilities**: Add to [`mcp/utils/`](mcp/utils/) for reusable functions
+4. **New Exceptions**: Add to [`mcp/core/exceptions.py`](mcp/core/exceptions.py)
+
+### Testing
+
+```bash
+# Test basic functionality
+python3 mcp.py --help
+python3 mcp.py ps
+python3 mcp.py create test-server "python3 example_mcp_server.py" --auto-start
+python3 mcp.py ps
+python3 mcp.py logs test-server
+python3 mcp.py stop test-server
+python3 mcp.py rm test-server
+```
 
 ## License
 
